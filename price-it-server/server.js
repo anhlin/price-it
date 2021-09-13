@@ -1,4 +1,4 @@
-const walmartAPI =  require('./walmart-api/getHeaders')
+const walmartAPIUtils =  require('./walmart-api-utils/utils')
 const express = require('express')
 const axios = require('axios')
 const cors = require('cors')
@@ -11,7 +11,7 @@ app.use(cors())
 
 app.get('/products', (req, res) => {
     const url = 'https://developer.api.walmart.com/api-proxy/service/affil/product/v2/paginated/items?&count=1000&soldByWmt=true&available=true'
-    const headers = walmartAPI.getHeaders()
+    const headers = walmartAPIUtils.getHeaders()
 
     axios({
         method: 'get',
@@ -48,7 +48,7 @@ app.get('/products_random', async (req, res) => {
 
     const url = `https://developer.api.walmart.com/api-proxy/service/affil/product/v2/search?query=${query}&facet=on`
     
-    const headers = walmartAPI.getHeaders()
+    const headers = walmartAPIUtils.getHeaders()
 
     axios({
         method: 'get',
