@@ -1,96 +1,129 @@
 import React, {useEffect, useState} from 'react'
 import {WalmartItem} from  '../../../types/walmart-types'
+import {GuessData} from '../../../types/game-types'
 import {Item} from './Item'
 import {GuessResult} from './GuessResult'
 import {formatUsd} from '../../helpers/formatUsd'
-import axios from 'axios'
+import {fetchRandomProduct} from '../../../api-methods/walmart-api-methods'
+import currency from 'currency.js'
 
 export const Game: React.FC = () => {
-
-    const [items, setItems] = useState<WalmartItem[]>([])
-
-    const [currentItemIndex, setCurrentItemIndex] = useState(0)
-
+    // Game States
+    const [currentItem, setCurrentItem] = useState<WalmartItem>()
+    const [gameScore, setGameScore] = useState(0)
+    const [roundNum, setRoundNum] = useState(1)
     const [userGuess, setUserGuess] = useState<string>('')
+    const [guessData, setGuessData] = useState<GuessData>()
+    const [guessHistory, setGuessHistory] = useState<GuessData[]>([])
+    const [totalScore, setTotalScore] = useState(0)
 
-    const [guessSubmitted, setGuessSubmitted] = useState(false)
-
-    const currentItem = items[currentItemIndex]
-
-    const shuffle = (array: WalmartItem[]) => {
-        var currentIndex = array.length,  randomIndex;
-      
-        while (currentIndex != 0) {
-          randomIndex = Math.floor(Math.random() * currentIndex);
-          currentIndex--;
-          [array[currentIndex], array[randomIndex]] = [
-            array[randomIndex], array[currentIndex]];
-        }
-      
-        return array;
-    }
+    // UI states
+    const [nextItemLoading, setNextItemLoading] = useState(false)
+    const [shouldRenderGuessResult, setShouldRenderGuessResult] = useState(false)
 
     useEffect(() => {
-        const url = `http://localhost:3030/products_random`
-        axios({
-            method: 'get',
-            url,            
-        }).then(res => {
-            console.log('res', res.data)
-            if (res) {
-                setItems(shuffle(res.data))
-            }
+        fetchRandomProduct().then(res => {
+            setCurrentItem(res.data[0])
+        }).catch(err => {
+            console.log('error fetching product', err)
         })
-    }, [guessSubmitted])
+    }, [])
+
+    const loadNextItem = () => {
+        setNextItemLoading(true)
+        fetchRandomProduct().then(res => {
+            setNextItemLoading(false)
+            setCurrentItem(res.data[0])
+        }).catch(err => {
+            console.log('error fetching product', err)
+        })
+    }
 
     const onGuessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setUserGuess(e.target.value)
     }
 
-    const onSubmitGuess = (e: React.FormEvent<HTMLFormElement> ) => {
+    const calculateScore = (actual: string, guess: string) => {
+            const currencyActual = currency(actual).value
+            const diff = Math.abs(currencyActual - currency(guess).value)
+            const percentError = Math.ceil(((diff) / currencyActual) * 100) / 100
+            const score = percentError < 1 ? 1000 - (percentError * 1000) : 0
+            return score
+    }
+
+    const onSubmitGuess = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        setGuessSubmitted(true)
+        if (currentItem) {
+            const guessScore = calculateScore(currentItem.salePrice.toString(), userGuess)
+            const guess = {
+                guessPrice: userGuess,
+                item: currentItem,
+                score: guessScore,
+            }
+            setTotalScore(prev => prev += guessScore)
+            loadNextItem()
+            setShouldRenderGuessResult(true)
+            setGuessData(guess)
+            setGuessHistory(prevState => [...prevState, guess])
+            setUserGuess('')
+        }
     }
     
     const onNextPress = () => {
-        setCurrentItemIndex(prevState => prevState + 1)
-        setUserGuess('')
-        setGuessSubmitted(false)
+        setGuessData(undefined)
+        setShouldRenderGuessResult(false)
+        setRoundNum(prev => prev + 1)
     }
     
     const renderResult = () => {
-        return (
-            <div>
+        if (guessData) {
+            return (
                 <GuessResult 
-                    guessPrice={formatUsd(userGuess)}
-                    actualPrice={formatUsd(currentItem.salePrice.toString())}
+                    guessPrice={guessData?.guessPrice}
+                    actualPrice={guessData.item.salePrice?.toString()}
                     onNextPress={onNextPress}
+                    nextItemLoading={nextItemLoading}
+                    score={guessData.score}
                 />
-            </div>
-        )
+            )
+        } else {
+            return null
+        }
     }
 
     const renderCurrentItem = () => {
-        return (
-            <div>
-                <Item 
-                    name={currentItem?.name}
-                    price={formatUsd(currentItem?.salePrice.toString())}
-                    imageSrc={currentItem?.largeImage}
-                />
-                <form onSubmit={onSubmitGuess}>
-                    <label>
-                        Guess:
-                        <input type="text" value={userGuess} onChange={onGuessChange} />
-                    </label>
-                    <input type="submit" value="Submit" />
-                </form>
-            </div>
-        )
+        if (currentItem) {
+            return (
+                <>
+                    <Item 
+                        name={currentItem?.name}
+                        description={currentItem.shortDescription}
+                        imageSrc={currentItem?.largeImage}
+                    />
+                    <form onSubmit={onSubmitGuess}>
+                        <label>
+                            Guess:
+                            <input type="text" value={userGuess} onChange={onGuessChange} />
+                        </label>
+                        <input type="submit" value="Submit" />
+                    </form>
+                </>
+            )
+        } else {
+            return null
+        }
     }
 
     return (
-        guessSubmitted ? renderResult() : renderCurrentItem()
+        <div>
+            <div>
+                Round: {roundNum}
+            </div>
+            <div>
+                Total score: {totalScore}
+            </div>
+            {shouldRenderGuessResult ? renderResult() : renderCurrentItem()}
+        </div>
     )
 }
 
