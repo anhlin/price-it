@@ -4,13 +4,14 @@ import {GuessData} from '../../../types/game-types'
 import {Item} from './Item'
 import {GuessResult} from './GuessResult'
 import {formatUsd} from '../../helpers/formatUsd'
+import {GameResult} from './GameResult'
 import {fetchRandomProduct} from '../../../api-methods/walmart-api-methods'
 import currency from 'currency.js'
+import {Button} from 'react-bootstrap'
 
 export const Game: React.FC = () => {
     // Game States
     const [currentItem, setCurrentItem] = useState<WalmartItem>()
-    const [gameScore, setGameScore] = useState(0)
     const [roundNum, setRoundNum] = useState(1)
     const [userGuess, setUserGuess] = useState<string>('')
     const [guessData, setGuessData] = useState<GuessData>()
@@ -21,11 +22,13 @@ export const Game: React.FC = () => {
     const [nextItemLoading, setNextItemLoading] = useState(false)
     const [shouldRenderGuessResult, setShouldRenderGuessResult] = useState(false)
 
+    const gameOver = roundNum > 10
+
     useEffect(() => {
         fetchRandomProduct().then(res => {
             setCurrentItem(res.data[0])
         }).catch(err => {
-            console.log('error fetching product', err)
+            console.error('error fetching product', err)
         })
     }, [])
 
@@ -48,6 +51,7 @@ export const Game: React.FC = () => {
             const diff = Math.abs(currencyActual - currency(guess).value)
             const percentError = Math.ceil(((diff) / currencyActual) * 100) / 100
             const score = percentError < 1 ? 1000 - (percentError * 1000) : 0
+
             return score
     }
 
@@ -74,6 +78,14 @@ export const Game: React.FC = () => {
         setShouldRenderGuessResult(false)
         setRoundNum(prev => prev + 1)
     }
+
+    const onNewGame = () => {
+        setGuessData(undefined)
+        setTotalScore(0)
+        setRoundNum(0)
+        setGuessHistory([])
+        setShouldRenderGuessResult(false)
+    }
     
     const renderResult = () => {
         if (guessData) {
@@ -84,6 +96,7 @@ export const Game: React.FC = () => {
                     onNextPress={onNextPress}
                     nextItemLoading={nextItemLoading}
                     score={guessData.score}
+                    wasLastTurn={roundNum === 10}
                 />
             )
         } else {
@@ -113,16 +126,34 @@ export const Game: React.FC = () => {
             return null
         }
     }
+    
+    const renderGameResult = () => {
+        return (
+                <GameResult
+                    finalScore={totalScore}
+                    guessHistory={guessHistory}
+                    onPlayAgainPress={onNewGame}
+                />
+        )
+    }
+
+    const renderRoundAndScore = () => {
+        return (
+            <>
+                <div>
+                    Round: {roundNum}
+                </div>
+                <div>
+                    Total score: {totalScore}
+                </div>
+            </>
+        )
+    }
 
     return (
         <div>
-            <div>
-                Round: {roundNum}
-            </div>
-            <div>
-                Total score: {totalScore}
-            </div>
-            {shouldRenderGuessResult ? renderResult() : renderCurrentItem()}
+            {!gameOver && renderRoundAndScore()}
+            {shouldRenderGuessResult ? renderResult() : gameOver ? renderGameResult() : renderCurrentItem()}
         </div>
     )
 }

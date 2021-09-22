@@ -1,4 +1,5 @@
 import React from 'react'
+import {Button} from 'react-bootstrap'
 
 interface GuessResultProps {
     guessPrice: string
@@ -6,9 +7,10 @@ interface GuessResultProps {
     onNextPress: () => void
     nextItemLoading: boolean
     score: number
+    wasLastTurn: boolean
 }
 
-export const GuessResult: React.FC<GuessResultProps> = ({guessPrice, actualPrice, onNextPress, score, nextItemLoading}) => {
+export const GuessResult: React.FC<GuessResultProps> = ({guessPrice, actualPrice, onNextPress, score, nextItemLoading, wasLastTurn}) => {
 
     return (
         <div>
@@ -21,7 +23,7 @@ export const GuessResult: React.FC<GuessResultProps> = ({guessPrice, actualPrice
             <div>
                 Score: {score}
             </div>
-            <button disabled={nextItemLoading} type="button" onClick={onNextPress}>Next Item</button>
+            <Button disabled={nextItemLoading && !wasLastTurn} type="button" onClick={onNextPress}>{wasLastTurn ? 'See Results' : 'Next Item'}</Button>
         </div>
     )
 }
