@@ -3,6 +3,7 @@ const arrayHelpers = require('./helpers/array-helpers')
 const express = require('express')
 const axios = require('axios')
 const cors = require('cors')
+const cheerio = require('cheerio')
 const _ = require('lodash')
 
 const app = express()
@@ -48,7 +49,7 @@ const getFilteredItems = (itemsArray) => {
             console.log('result with no books/cds/dvds found', noBooks.map(item => item.name))
             return noBooks
         }
-    } 
+    }
 }
 
 app.get('/products_random', async (req, res, next) => {
@@ -82,6 +83,39 @@ app.get('/products_random', async (req, res, next) => {
     }
     request(5)
 })
+
+app.get('/scrape_amazon', async (req, res, next) => {
+    const query = await getRandomQuery();
+    console.log('query for scrape', query)
+    //https://www.amazon.com/s?crid=36QNR0DBY6M7J&k=shelves&ref=glow_cls&refresh=1&sprefix=s%2Caps%2C309
+    const url = encodeURI(`https://www.amazon.com/s?k=${query}&page=1`);
+
+    axios({
+        method: 'get',
+        url:url,
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:12.0) Gecko/20100101 Firefox/12.0'
+        }
+    }).then((result) => {
+        const html = result.data;
+
+        const $ = cheerio.load(html);
+        const shelves = [];
+        console.log('cheerio log',$('div.sg-col-20-of-24.s-matching-dir.sg-col-16-of-20.sg-col.sg-col-8-of-12.sg-col-12-of-16'))
+        $('div.sg-col-20-of-24.s-matching-dir.sg-col-16-of-20.sg-col.sg-col-8-of-12.sg-col-12-of-16').each((_idx, el) => {
+            //div.sg-col-20-of-24.s-matching-dir.sg-col-16-of-20.sg-col.sg-col-8-of-12.sg-col-12-of-16
+            //TODO: console.log(line104), compare output
+            const shelf = $(el)
+            const title = shelf.find('a.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal').attr('href')
+
+            shelves.push(title)
+        });
+        console.log(shelves)
+        res.send(shelves)
+    })
+
+})
+
 
 app.listen(port, () => {
     console.log(`Example app listening at http://localhost:${port}`)

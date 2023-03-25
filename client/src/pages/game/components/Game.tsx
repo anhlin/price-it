@@ -5,7 +5,7 @@ import {Item} from './Item'
 import {GuessResult} from './GuessResult'
 import {formatUsd} from '../../helpers/formatUsd'
 import {GameResult} from './GameResult'
-import {fetchRandomProduct} from '../../../api-methods/walmart-api-methods'
+import {fetchRandomProduct, scrapeAmazon} from '../../../api-methods/walmart-api-methods'
 import currency from 'currency.js'
 import {Button} from 'react-bootstrap'
 
@@ -25,7 +25,11 @@ export const Game: React.FC = () => {
     const gameOver = roundNum > 10
 
     useEffect(() => {
+        scrapeAmazon().then((res) => {
+            console.log('amazon scrape', res.data)
+        })
         fetchRandomProduct().then(res => {
+            console.log(res.data[0])
             setCurrentItem(res.data[0])
         }).catch(err => {
             console.error('error fetching product', err)
@@ -72,7 +76,7 @@ export const Game: React.FC = () => {
             setUserGuess('')
         }
     }
-    
+
     const onNextPress = () => {
         setGuessData(undefined)
         setShouldRenderGuessResult(false)
@@ -86,11 +90,11 @@ export const Game: React.FC = () => {
         setGuessHistory([])
         setShouldRenderGuessResult(false)
     }
-    
+
     const renderResult = () => {
         if (guessData) {
             return (
-                <GuessResult 
+                <GuessResult
                     guessPrice={guessData?.guessPrice}
                     actualPrice={guessData.item.salePrice?.toString()}
                     onNextPress={onNextPress}
@@ -108,7 +112,7 @@ export const Game: React.FC = () => {
         if (currentItem) {
             return (
                 <>
-                    <Item 
+                    <Item
                         name={currentItem?.name}
                         description={currentItem.shortDescription}
                         imageSrc={currentItem?.largeImage}
@@ -126,7 +130,7 @@ export const Game: React.FC = () => {
             return null
         }
     }
-    
+
     const renderGameResult = () => {
         return (
                 <GameResult

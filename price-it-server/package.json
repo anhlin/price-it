@@ -12,6 +12,7 @@
   "dependencies": {
     "amazon-unthrottled-api": "^1.0.10",
     "axios": "^0.21.4",
+    "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "fs": "0.0.1-security",
